@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#c8e2f8">
+  <title>謎解き</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: #303847;
+      font-family:
+        "Noto Sans JP",
+        "Yu Gothic",
+        "Hiragino Kaku Gothic ProN",
+        sans-serif;
+      text-align: center;
+      background: #fdf8fa;
+    }
+
+    /* 背景画像 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image: url("haikei.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .container {
+      width: min(100% - 32px, 560px);
+      margin: 0 auto;
+      padding: 56px 0 48px;
+    }
+
+    section {
+      margin-bottom: 40px;
+      scroll-margin-top: 20px;
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 27px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    .question {
+      margin: 0 0 22px;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .problem {
+      margin: 28px 0;
+      font-size: clamp(25px, 7vw, 34px);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      overflow-wrap: anywhere;
+    }
+
+    /* RED and BLACK の色分け */
+    .red-text {
+      color: #e53935;
+    }
+
+    .and-text {
+      color: #888888;
+    }
+
+    .black-text {
+      color: #222222;
+    }
+
+    /* 白い回答カード */
+    .answer-card {
+      padding: 30px 20px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(133, 158, 193, 0.45);
+      border-radius: 12px;
+      box-shadow: 0 5px 18px rgba(69, 98, 135, 0.10);
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      margin: 0 auto;
+      background: #fff;
+      color: #303847;
+      border: 1px solid #bdc9d9;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #719fcf;
+      box-shadow: 0 0 0 3px rgba(113, 159, 207, 0.18);
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      margin: 16px auto 0;
+      padding: 12px 20px;
+      color: #fff;
+      background: #719fcf;
+      border: none;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background: #5c8bbd;
+    }
+
+    button:focus-visible {
+      outline: 3px solid #9cb9df;
+      outline-offset: 3px;
+    }
+
+    .result {
+      margin: 18px 0 0;
+      font-size: 17px;
+      font-weight: 600;
+      white-space: pre-line;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .divider {
+      border: 0;
+      border-top: 1px solid #d6dce6;
+      margin: 0 0 28px;
+    }
+
+    .clear-message {
+      color: #557fae;
+      font-weight: 600;
+      line-height: 1.9;
+    }
+
+    /* タップして開くヒント */
+    .hint-box {
+      margin-top: 24px;
+      text-align: left;
+      border: 1px solid #c6d7e9;
+      border-radius: 8px;
+      background: rgba(240, 247, 255, 0.75);
+      overflow: hidden;
+    }
+
+    .hint-box summary {
+      padding: 15px 14px;
+      color: #557fae;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hint-box summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .hint-box summary::after {
+      content: "＋";
+      float: right;
+      margin-left: 8px;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .hint-box[open] summary::after {
+      content: "－";
+    }
+
+    .hint-box summary:focus-visible {
+      outline: 2px solid #719fcf;
+      outline-offset: -3px;
+    }
+
+    .hint-content {
+      padding: 0 14px 16px;
+      color: #48566b;
+      font-size: 14px;
+      line-height: 1.9;
+    }
+
+    .hint-content p {
+      margin: 0;
+    }
+
+    /* ポップアップの背景 */
+    .popup-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(40, 58, 82, 0.35);
+    }
+
+    /* ポップアップ本体 */
+    .popup {
+      width: min(100%, 340px);
+      padding: 30px 24px;
+      background: rgba(255, 255, 255, 0.98);
+      border: 2px solid #b8d7f3;
+      border-radius: 18px;
+      box-shadow: 0 8px 28px rgba(48, 65, 90, 0.20);
+      cursor: pointer;
+      text-align: center;
+      animation: popup-appear 0.2s ease-out;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .popup-message {
+      margin: 0;
+      color: #557fae;
+      font-size: 23px;
+      line-height: 1.7;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .popup-hint {
+      margin: 14px 0 0;
+      color: #7b8798;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* ポップアップ内の2行表示 */
+    .popup-title {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .popup-problem {
+      display: block;
+      white-space: nowrap;
+    }
+
+    @keyframes popup-appear {
+      from {
+        opacity: 0;
+        transform: scale(0.88);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* スマートフォン */
+    @media (max-width: 600px) {
+      body::before {
+        background-size: cover;
+        background-position: center center;
+      }
+
+      .container {
+        width: calc(100% - 36px);
+        padding-top: 42px;
+        padding-bottom: 36px;
+      }
+
+      section {
+        margin-bottom: 30px;
+        scroll-margin-top: 12px;
+      }
+
+      h1 {
+        font-size: 25px;
+      }
+
+      .answer-card {
+        padding: 26px 18px;
+      }
+
+      .popup-message {
+        font-size: 22px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      button {
+        transition: none;
+      }
+
+      .popup {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+
+    <!-- 謎① -->
+    <section id="question1">
+      <h1>謎①</h1>
+
+      <div class="answer-card">
+        <p class="question">答えを入力してください</p>
+
+        <input
+          id="answer1"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="謎①の回答"
+        >
+
+        <button type="button" onclick="checkAnswer1()">
+          回答する
+        </button>
+
+        <p id="result1" class="result" role="status"></p>
+
+        <!-- 謎①のヒント：３段階 -->
+        <details class="hint-box">
+          <summary>ヒント①を見る</summary>
+          <div class="hint-content">
+            <p>まずは１枚目の画像だけに注目しよう。マークはいくつ並んでいるかな？</p>
+          </div>
+        </details>
+
+        <details class="hint-box">
+          <summary>ヒント②を見る</summary>
+          <div class="hint-content">
+            <p>チャックがついているのは何番目かな？</p>
+          </div>
+        </details>
+
+        <details class="hint-box">
+          <summary>ヒント③を見る</summary>
+          <div class="hint-content">
+            <p>チャックの位置をよく観察してみよう</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- 謎② -->
+    <section id="question2" class="hidden">
+      <hr class="divider">
+      <h1>謎②</h1>
+
+      <div class="answer-card">
+        <p class="problem">
+          <span class="red-text">RED</span>
+          <span class="and-text">and</span>
+          <span class="black-text">BLACK</span>
+        </p>
+
+        <p class="question">最終回答を入力してください</p>
+
+        <input
+          id="answer2"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="最終回答"
+        >
+
+        <button type="button" onclick="checkAnswer2()">
+          回答する
+        </button>
+
+        <p id="result2" class="result" role="status"></p>
+
+        <!-- 謎②のヒント：３段階 -->
+        <details class="hint-box">
+          <summary>ヒント①を見る</summary>
+          <div class="hint-content">
+            <p>「RED and BLACK」とは何のことだろう？みんなも一度は遊んだことがあるはず</p>
+          </div>
+        </details>
+
+        <details class="hint-box">
+          <summary>ヒント②を見る</summary>
+          <div class="hint-content">
+            <p>赤と黒のものが13ずつあれば、ちょうど26になるね</p>
+          </div>
+        </details>
+
+        <details class="hint-box">
+          <summary>ヒント③を見る</summary>
+          <div class="hint-content">
+            <p>２枚目の画像と組み合わせて考えよう。さっきはどうやって解いたかな？</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- クリア画面 -->
+    <section id="clear" class="hidden">
+      <hr class="divider">
+
+      <div class="answer-card">
+        <h1>正解</h1>
+        <p class="problem clear-message">CLEAR</p>
+        <p class="clear-message">
+          クリアおめでとう！<br>
+          鍵は「代表の誕生日」で開くよ
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ポップアップ -->
+  <div
+    id="popupOverlay"
+    class="popup-overlay hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="popupMessage"
+  >
+    <div
+      class="popup"
+      onclick="closePopup()"
+      onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); closePopup(); }"
+      role="button"
+      tabindex="0"
+      aria-label="タップして閉じる"
+    >
+      <p id="popupMessage" class="popup-message">正解！</p>
+      <p class="popup-hint">タップして閉じる</p>
+    </div>
+  </div>
+
+  <script>
+    /* ポップアップを閉じた後に移動する場所 */
+    let scrollTargetId = null;
+
+    function normalizeAnswer(value) {
+      return value.normalize("NFKC").trim().toLowerCase();
+    }
+
+    /* ポップアップを表示 */
+    function showPopup(message) {
+      document.getElementById("popupMessage").innerHTML = message;
+
+      document.getElementById("popupOverlay")
+        .classList.remove("hidden");
+    }
+
+    /* ポップアップを閉じ、必要なら次の画面へスクロール */
+    function closePopup() {
+      document.getElementById("popupOverlay")
+        .classList.add("hidden");
+
+      if (scrollTargetId) {
+        const target = document.getElementById(scrollTargetId);
+        const targetId = scrollTargetId;
+
+        scrollTargetId = null;
+
+        if (target) {
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+
+          /* 謎①の正解後は、謎②の入力欄にフォーカス */
+          if (targetId === "question2") {
+            window.setTimeout(function() {
+              document.getElementById("answer2").focus({
+                preventScroll: true
+              });
+            }, 450);
+          }
+        }
+      }
+    }
+
+    /* 謎①の回答判定 */
+    function checkAnswer1() {
+      const answer = normalizeAnswer(
+        document.getElementById("answer1").value
+      );
+
+      if (answer === "zip") {
+        // 次の問題を表示
+        document.getElementById("question2")
+          .classList.remove("hidden");
+
+        // ポップアップを閉じたら謎②へ移動
+        scrollTargetId = "question2";
+
+        // 2行のポップアップを表示
+        showPopup(
+          '<span class="popup-title">解凍成功</span>' +
+          '<span class="popup-problem">' +
+          '<span class="red-text">RED</span> ' +
+          '<span class="and-text">and</span> ' +
+          '<span class="black-text">BLACK</span>' +
+          '</span>'
+        );
+      } else {
+        // 不正解なら自動スクロールしない
+        scrollTargetId = null;
+        showPopup("不正解");
+      }
+    }
+
+    /* 謎②の回答判定 */
+    function checkAnswer2() {
+      const answer = normalizeAnswer(
+        document.getElementById("answer2").value
+      );
+
+      if (answer === "mimic") {
+        // CLEAR画面を表示
+        document.getElementById("clear")
+          .classList.remove("hidden");
+
+        // ポップアップを閉じたらCLEARへ移動
+        scrollTargetId = "clear";
+        showPopup("正解！");
+      } else {
+        // 不正解なら自動スクロールしない
+        scrollTargetId = null;
+        showPopup("不正解");
+      }
+    }
+
+    /* Enterキーでも回答できる */
+    document.getElementById("answer1")
+      .addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          checkAnswer1();
+        }
+      });
+
+    document.getElementById("answer2")
+      .addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          checkAnswer2();
+        }
+      });
+  </script>
+</body>
+</html>
